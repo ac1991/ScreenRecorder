@@ -394,6 +394,7 @@ public class MainActivity extends Activity {
 
     private void stopRecorder() {
         mNotifications.clear();
+
         if (mRecorder != null) {
             mRecorder.quit();
         }
@@ -774,15 +775,19 @@ public class MainActivity extends Activity {
 
         int length_toast = Locale.getDefault().getCountry().equals("BR") ? Toast.LENGTH_LONG : Toast.LENGTH_SHORT;
         // In Brazilian Portuguese this may take longer to read
+        try {
+            Toast toast = Toast.makeText(this,
+                    (args.length == 0) ? message : String.format(Locale.US, message, args),
+                    length_toast);
+            if (Looper.myLooper() != Looper.getMainLooper()) {
+                runOnUiThread(toast::show);
+            } else {
+                toast.show();
+            }
+        }catch (Exception e){
 
-        Toast toast = Toast.makeText(this,
-                (args.length == 0) ? message : String.format(Locale.US, message, args),
-                length_toast);
-        if (Looper.myLooper() != Looper.getMainLooper()) {
-            runOnUiThread(toast::show);
-        } else {
-            toast.show();
         }
+
     }
 
     private static String[] codecInfoNames(MediaCodecInfo[] codecInfos) {

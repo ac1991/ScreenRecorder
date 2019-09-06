@@ -28,6 +28,7 @@ import android.content.pm.ActivityInfo;
 import android.content.pm.PackageManager;
 import android.content.res.Configuration;
 import android.graphics.Point;
+import android.graphics.SurfaceTexture;
 import android.hardware.display.DisplayManager;
 import android.hardware.display.VirtualDisplay;
 import android.media.MediaCodecInfo;
@@ -43,6 +44,7 @@ import android.os.StrictMode;
 import android.preference.PreferenceManager;
 import android.util.Log;
 import android.util.Range;
+import android.view.Surface;
 import android.view.View;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
@@ -95,7 +97,7 @@ public class MainActivity extends Activity {
      * instead of a foreground Activity in this demonstrate.
      */
     private ScreenRecorder mRecorder;
-    private MediaProjection mMediaProjection;
+//    private MediaProjection mMediaProjection;
     private VirtualDisplay mVirtualDisplay;
 
     @Override
@@ -145,16 +147,16 @@ public class MainActivity extends Activity {
         if (requestCode == REQUEST_MEDIA_PROJECTION) {
             // NOTE: Should pass this result data into a Service to run ScreenRecorder.
             // The following codes are merely exemplary.
-
-            MediaProjection mediaProjection = mMediaProjectionManager.getMediaProjection(resultCode, data);
-            if (mediaProjection == null) {
-                Log.e("@@", "media projection is null");
-                return;
-            }
-
-            mMediaProjection = mediaProjection;
-            mMediaProjection.registerCallback(mProjectionCallback, new Handler());
-            startCapturing(mediaProjection);
+//
+//            MediaProjection mediaProjection = mMediaProjectionManager.getMediaProjection(resultCode, data);
+//            if (mediaProjection == null) {
+//                Log.e("@@", "media projection is null");
+//                return;
+//            }
+//
+//            mMediaProjection = mediaProjection;
+//            mMediaProjection.registerCallback(mProjectionCallback, new Handler());
+//            startCapturing(mediaProjection);
         }
     }
 
@@ -194,7 +196,7 @@ public class MainActivity extends Activity {
 
     private ScreenRecorder newRecorder(MediaProjection mediaProjection, VideoEncodeConfig video,
                                        AudioEncodeConfig audio, File output) {
-        final VirtualDisplay display = getOrCreateVirtualDisplay(mediaProjection, video);
+        final VirtualDisplay display = getOrCreateVirtualDiaplay(video);//getOrCreateVirtualDisplay(mediaProjection, video);
         ScreenRecorder r = new ScreenRecorder(video, audio, display, output.getAbsolutePath());
         r.setCallback(new ScreenRecorder.Callback() {
             long startTime = 0;
@@ -231,6 +233,23 @@ public class MainActivity extends Activity {
         return r;
     }
 
+    DisplayManager displayManager  = null;
+    private VirtualDisplay getOrCreateVirtualDiaplay(VideoEncodeConfig config){
+        if (mVirtualDisplay == null){
+            if (displayManager == null){
+                displayManager = (DisplayManager) getSystemService(Context.DISPLAY_SERVICE);
+            }
+
+            if (displayManager != null){
+                mVirtualDisplay = displayManager.createVirtualDisplay("test", config.width,
+                        config.height,
+                        getResources().getConfiguration().densityDpi,
+                        null, 0);
+            }
+        }
+
+        return mVirtualDisplay;
+    }
 
     private VirtualDisplay getOrCreateVirtualDisplay(MediaProjection mediaProjection, VideoEncodeConfig config) {
         if (mVirtualDisplay == null) {
@@ -269,6 +288,9 @@ public class MainActivity extends Activity {
             // no selected codec ??
             return null;
         }
+
+        SurfaceTexture surfaceTexture;
+
         // video size
         int[] selectedWithHeight = getSelectedWithHeight();
         boolean isLandscape = isLandscape();
@@ -312,11 +334,11 @@ public class MainActivity extends Activity {
             mVirtualDisplay.release();
             mVirtualDisplay = null;
         }
-        if (mMediaProjection != null) {
-            mMediaProjection.unregisterCallback(mProjectionCallback);
-            mMediaProjection.stop();
-            mMediaProjection = null;
-        }
+//        if (mMediaProjection != null) {
+//            mMediaProjection.unregisterCallback(mProjectionCallback);
+//            mMediaProjection.stop();
+//            mMediaProjection = null;
+//        }
     }
 
     private void requestMediaProjection() {
@@ -372,11 +394,11 @@ public class MainActivity extends Activity {
         if (mRecorder != null) {
             stopRecordingAndOpenFile(v.getContext());
         } else if (hasPermissions()) {
-            if (mMediaProjection == null) {
-                requestMediaProjection();
-            } else {
-                startCapturing(mMediaProjection);
-            }
+//            if (mMediaProjection == null) {
+//                requestMediaProjection();
+//            } else {
+                startCapturing(null);
+//            }
         } else if (Build.VERSION.SDK_INT >= M) {
             requestPermissions();
         } else {
@@ -388,13 +410,12 @@ public class MainActivity extends Activity {
         if (mRecorder == null) return;
         mRecorder.start();
         mButton.setText(getString(R.string.stop_recorder));
-        registerReceiver(mStopActionReceiver, new IntentFilter(ACTION_STOP));
-        moveTaskToBack(true);
+//        registerReceiver(mStopActionReceiver, new IntentFilter(ACTION_STOP));
+//        moveTaskToBack(true);
     }
 
     private void stopRecorder() {
         mNotifications.clear();
-
         if (mRecorder != null) {
             mRecorder.quit();
         }
@@ -772,10 +793,10 @@ public class MainActivity extends Activity {
     }
 
     private void toast(String message, Object... args) {
-
-        int length_toast = Locale.getDefault().getCountry().equals("BR") ? Toast.LENGTH_LONG : Toast.LENGTH_SHORT;
-        // In Brazilian Portuguese this may take longer to read
         try {
+            int length_toast = Locale.getDefault().getCountry().equals("BR") ? Toast.LENGTH_LONG : Toast.LENGTH_SHORT;
+            // In Brazilian Portuguese this may take longer to read
+
             Toast toast = Toast.makeText(this,
                     (args.length == 0) ? message : String.format(Locale.US, message, args),
                     length_toast);
@@ -787,7 +808,17 @@ public class MainActivity extends Activity {
         }catch (Exception e){
 
         }
+        int length_toast = Locale.getDefault().getCountry().equals("BR") ? Toast.LENGTH_LONG : Toast.LENGTH_SHORT;
+        // In Brazilian Portuguese this may take longer to read
 
+        Toast toast = Toast.makeText(this,
+                (args.length == 0) ? message : String.format(Locale.US, message, args),
+                length_toast);
+        if (Looper.myLooper() != Looper.getMainLooper()) {
+            runOnUiThread(toast::show);
+        } else {
+            toast.show();
+        }
     }
 
     private static String[] codecInfoNames(MediaCodecInfo[] codecInfos) {
